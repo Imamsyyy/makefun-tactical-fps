@@ -1,0 +1,6 @@
+out/
+out-*/
+node_modules/
+*.tar.gz
+*.log
+.makefun-local/

@@ -1,0 +1,1 @@
+{"name":"saltline-relay-siege","private":true,"type":"module","scripts":{"test":"node tests/simulation.mjs","start":"node serve.ts","build":"node main.ts"}}

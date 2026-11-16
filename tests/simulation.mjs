@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {createState,newRound,buy,deploy,fire,reload,throwSmoke,step,blocked,clearLine} from '../game/src/sim.js';
+let count=0;function test(name,f){f();count++;console.log('PASS '+name);}function fresh(){const s=createState();newRound(s);deploy(s);return s;}function ticks(s,n,input={}){for(let i=0;i<n;i++)step(s,input,1/120);}
+test('Buy phase and cash conservation',()=>{const s=createState();newRound(s);assert(buy(s,'carbine'));assert.equal(s.cash,1000);assert(buy(s,'armor'));assert.equal(s.cash,350);assert(!buy(s,'marksman'));deploy(s);assert(!buy(s,'needle'));});
+test('Acceleration, crouch and hard collision',()=>{const s=fresh();s.bots=[];s.bots.push({team:1,hp:100,x:15,z:-15,cd:999,route:[[15,-15]],way:0});ticks(s,120,{forward:true,crouch:true});assert(s.player.z<16&&s.player.z>13);assert(s.player.y<1.1);assert(blocked(8,0));assert(!clearLine(0,0,14,0));});
+test('Headshot and kill reward',()=>{const s=fresh();s.bots=[{team:1,hp:70,x:0,z:10,id:'TEST',cd:999,route:[[0,10]],way:0}];assert(fire(s));assert(s.bots[0].hp<=0);assert.equal(s.kills,1);assert.equal(s.cash,2450);step(s,{},1/120);assert.equal(s.phase,'result');assert.equal(s.score[0],1);});
+test('Wall blocks gunfire',()=>{const s=fresh();s.player.x=0;s.player.z=5;s.bots=[{team:1,hp:100,x:0,z:0,id:'TEST'}];fire(s);assert.equal(s.bots[0].hp,100);});
+test('Reload transfers only available reserve',()=>{const s=fresh();s.ammo=1;s.reserve=4;reload(s);ticks(s,180);assert.equal(s.ammo,5);assert.equal(s.reserve,0);});
+test('Smoke consumes charge and expires',()=>{const s=fresh();throwSmoke(s);assert.equal(s.grenades,0);assert.equal(s.smokes.length,1);throwSmoke(s);assert.equal(s.smokes.length,1);s.bots[0].hp=0;for(const b of s.bots)b.cd=999;ticks(s,1201);assert.equal(s.smokes.length,0);});
+test('Bots move, acquire and damage player',()=>{const s=fresh();s.bots=[{team:1,hp:100,x:0,z:8,id:'TEST',cd:0,route:[[0,10]],way:0}];ticks(s,600);assert(s.player.hp<100);});
+test('Objective connection and transmission victory',()=>{const s=fresh();s.player.z=-15;s.bots=[{team:1,hp:100,x:15,z:15,cd:999,route:[[15,15]],way:0}];ticks(s,361,{use:true});assert(s.armed);ticks(s,3001);assert.equal(s.phase,'result');assert.equal(s.score[0],1);});
+test('Sentry defuse and timeout losses',()=>{const s=fresh();s.armed=true;s.bots=[{team:1,hp:100,x:0,z:-15,cd:999,route:[[0,-15]],way:0}];ticks(s,601);assert.equal(s.score[1],1);const t=fresh();t.time=.01;ticks(t,3);assert.equal(t.score[1],1);});
+test('Round restart resets transient state, preserves score',()=>{const s=fresh();s.time=0;step(s,{},.01);const money=s.cash;newRound(s);assert.equal(s.round,2);assert.equal(s.phase,'buy');assert.equal(s.player.hp,100);assert.equal(s.cash,money);assert.equal(s.score[1],1);});
+console.log(`${count} simulation tests passed`);

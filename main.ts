@@ -1,0 +1,12 @@
+import { cpSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { buildDossier } from './vendor/makefun-threejs.ts';
+const root=fileURLToPath(new URL('.',import.meta.url));
+const output=process.env.MAKEFUN_OUTPUT_DIR??'/output';
+if(!existsSync(join(root,'screenshots','1-cover.jpg')))throw new Error('Capture the actual game screenshots before packaging');
+mkdirSync(output,{recursive:true});
+for(const directory of ['game','screenshots'])cpSync(join(root,directory),join(output,directory),{recursive:true});
+const dossier=buildDossier(output,{text_max_bytes:163840,screenshots:{max:4,max_bytes:262144},game_max_files:993,game_max_bytes:50331648});
+writeFileSync(join(output,'dossier.json'),dossier);
+console.log('SALTLINE packaged with official buildDossier');
